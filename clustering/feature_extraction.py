@@ -20,21 +20,27 @@ args = parser.parse_args()
 def get_img_features(imgDir):
     model = VGG16(weights='imagenet')
 
-    dir = os.fsencode(imgDir)
+    d = os.fsencode(imgDir)
     vgg16_features = []
     pathToFeatures = []
 
-    for file in os.listdir(dir):
-        fileName = os.fsdecode(file)
+    for f in os.listdir(d):
+        fileName = os.fsdecode(f)
         if fileName.endswith(".png"):
-            img = image.load_img(fileName, target_size=(224, 224))
-            img_data = image.img_to_array(img)
-            img_data = np.expand_dims(img_data, axis=0)
-            img_data = preprocess_input(img_data)
+            fName = os.path.abspath(os.path.join(imgDir, fileName))
+            # seems like some files throw OSError that the image can not be found
+            try:
+              img = image.load_img(fName, target_size=(224,224))
+              img_data = image.img_to_array(img)
+              img_data = np.expand_dims(img_data, axis=0)
+              img_data = preprocess_input(img_data)
 
-            vgg16_feature = model.predict(img_data)
-            vgg16_features.append(np.array(vgg16_feature).flatten())
-            pathToFeatures.append(os.path.abspath(fileName))
+              vgg16_feature = model.predict(img_data)
+              vgg16_features.append(np.array(vgg16_feature).flatten())
+              pathToFeatures.append(fName)
+            except OSError as e:
+              print("error with data for the following img")
+              print(e)
 
     return (np.array(vgg16_features), pathToFeatures)
 
@@ -59,15 +65,7 @@ def group_imgs(labels_, pathToFeatures):
         'Clusters' : labels_,
         'paths'    : pathToFeatures
     })
-    i = 0
-    for cluster in df.groupby(['Clusters'], as_index=False)['Paths'].agg({'list':(lambda x : list(x))}).list:
-        newDir = os.getcwd() + "/cluster-" + str(i)
-        i += 1
-        if os.path.exists(newDir):
-            shutil.rmtree(newDir)
-        os.makedirs(newDir)
-        for f in cluster:
-            shutil.copy(f, newDir)
+    df.groupby(['Clusters'], as_index=False)['Paths'].agg({'list':(lambda x : list(x))}).to_csv('clustering_results.csv')
 
 
 if __name__ == '__main__':
