@@ -12,7 +12,7 @@ import numpy as np
 import argparse
 
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.neighbors import NearestNeighbors
 
 from utility import *
@@ -43,22 +43,23 @@ def split_corpus_test_train(data):
     # so if my assumption is correct, we can just go ahead and do this
     descriptions = data['description'].to_numpy()
     icons = data['icon'].to_numpy()
-    return train_test_split(descriptions, icons, train_size=0.6, random_sate=44)
+    return train_test_split(descriptions, icons, train_size=0.6)
 
 
-def do_some_stuff():
+def do_some_stuff(meta, pngs):
     print("Getting all the data...")
-    data = get_full_corpus("", "")
+    data = get_full_corpus(meta, pngs)
     print("Splitting into training and testing sets...")
     # don't know if you can just do this. as data is a panda frame with array of dictionaries
     d_train, d_test, i_train, i_test = split_corpus_test_train(data)
-    print("len of d_train and i_train should be samee %s %s" % len(d_train), len(i_train))
+    print("len of d_train and i_train should be samee %s %s" % (len(d_train), len(i_train)))
     print("Get bag of word features for training...")
     bow_train_features = get_trained_data_features(d_train)
-    print("Length of bow_train_features %s" % len(bow_train_features))
+    # getnnz()
+    # print("Length of bow_train_features %s" % bow_train_features.getnnz())
     print("Get bag of word features for testing...")
     bow_test_features = get_test_data_features(d_test)
-    print("Length of bow_test_features %s" % len(bow_test_features))
+    # print("Length of bow_test_features %s" % bow_test_features.getnnz())
 
     neighbors = NearestNeighbors(metric='cosine')
     print("Fitting for NearestNeighbors...")
@@ -71,7 +72,7 @@ def do_some_stuff():
     # test image features = [[], [], [], []]
 
     training_icon_f, testing_icon_f = get_features(i_train, i_test)
-    print("len of results (%s) should be the same as len of testing_features (%s)" % len(results), len(testing_icon_f))
+    print("len of results (%s) should be the same as len of testing_features (%s)" % (len(results), len(testing_icon_f)))
     highest = (float("-inf"), -1)
     lowest = (float("inf"), -1)
     avgs = []
@@ -92,7 +93,7 @@ def do_some_stuff():
         if avg > highest[0]:
             highest[0] = avg
             highest[1] = i
-        else if avg < lowest[0]:
+        elif avg < lowest[0]:
             lowest[0] = avg
             lowest[1] = i
         if testing_icon_f[i] in neighbors_f:
@@ -100,6 +101,8 @@ def do_some_stuff():
 
     print(avgs)
     print(acc)
+    print(highest)
+    print(lowest)
 
 
 
