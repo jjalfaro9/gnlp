@@ -66,9 +66,8 @@ def do_some_stuff(meta, pngs):
     print("you're only getting a small set of img features, to figure things out *******!!")
     training_icon_f, testing_icon_f = get_features(pngs, i_train, i_test)
     img_n = NearestNeighbors(metric='cosine')
-    # put all the image features (this way we search the whole space when looking for close images)
-    all_img_features = training_icon_f + testing_icon_f
-    img_n.fit(all_img_features)
+    # we need to only look up unseen img data!
+    img_n.fit(testing_icon_f)
     print("len of results (%s) should be the same as len of testing_features (%s)" % (len(results), len(testing_icon_f)))
     # now that we have our k-nearest neighbors from bag of words features, look up the image features
     # now that we have those image features, we need to find the k-closest images to those images
@@ -81,16 +80,18 @@ def do_some_stuff(meta, pngs):
 
         img_neighbors = img_n.kneighbors(neighbors_f, return_distance=False)
         # okay! this contains the nearest neighbors [[], [], [], [], []] and within that are indecies
-        closests_featured_imgs = [[all_img_features[n] for n in neighbor]for neighbor in img_neighbors]
+        closests_featured_imgs = [[testing_icon_f[n] for n in neighbor]for neighbor in img_neighbors]
         if np.array(testing_icon_f[i]) in np.array(closests_featured_imgs):
             accuracy += 1
         if (counter % 5000 == 0):
             print("Counter: %s" % counter)
             print("Current accuracy: %s" % (accuracy/len(testing_icon_f)))
-    accuracy = accuracy / len(testing_icon_f)
+    t_l = len(testing_icon_f)
+    accuracy = accuracy / t_l
     print("Accuracy for finding an image %f" % accuracy)
     with open('results.txt', 'w') as f:
         f.write(f'Accuracy for finding an image with bag of words baseline model: => {accuracy}')
+        f.write(f'size of testing data: => {t_l}')
     
 
 
