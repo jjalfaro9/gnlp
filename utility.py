@@ -85,16 +85,20 @@ def get_data_frame(metadata_path, PNG_DIR):
     return pd.DataFrame(data)
 
 
-def get_features(training, testing):
+def get_features(pngs_dir, training, testing):
     model = VGG16(weights='imagenet')
-    training_features = _extract_features(training, model)
-    testing_features = _extract_features(testing, model)
+    training_features = _extract_features(pngs_dir, training, model)
+    testing_features = _extract_features(pngs_dir, testing, model)
     return (training_features, testing_features)
 
-def _extract_features(icons, model):
+def _extract_features(pngs_dir, icons, model):
     vgg16_features = []
+    counter = 0 
     for i in icons:
-        img = image.load_img(i, target_size=(224,224))
+        counter += 1
+        if (counter % 5000 == 0):
+            print("extracting features: =>", counter, pngs_dir + i)
+        img = image.load_img(pngs_dir + i, target_size=(224,224))
         img_data = image.img_to_array(img)
         img_data = np.expand_dims(img_data, axis=0)
         img_data = preprocess_input(img_data)

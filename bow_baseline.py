@@ -34,16 +34,9 @@ def get_full_corpus(metadata_path, PNG_DIR):
     return get_data_frame(metadata_path, PNG_DIR)
 
 def split_corpus_test_train(data):
-    # train_i, test_i = train_test_split(np.arange(len(data)), train_size=0.6, random_state=44)
-    # train = data.ix[train_i]
-    # test = data.ix[test_i]
-    # return (train, test)
-    # d = data['description'].to_numpy() if data frame doesnt work
-    # actually I don't want to lose the img png directory 'icon'
-    # so if my assumption is correct, we can just go ahead and do this
-    # why did this give an error?
     descriptions = data['description'].to_numpy()
     icons = data['icon'].to_numpy()
+    print("Example of icon (icon livin' lol) %s " % icons[0])
     return train_test_split(descriptions, icons, train_size=0.6)
 
 
@@ -51,16 +44,12 @@ def do_some_stuff(meta, pngs):
     print("Getting all the data...")
     data = get_full_corpus(meta, pngs)
     print("Splitting into training and testing sets...")
-    # don't know if you can just do this. as data is a panda frame with array of dictionaries
     d_train, d_test, i_train, i_test = split_corpus_test_train(data)
     print("len of d_train and i_train should be samee %s %s" % (len(d_train), len(i_train)))
     print("Get bag of word features for training...")
     bow_train_features = get_trained_data_features(d_train)
-    # getnnz()
-    # print("Length of bow_train_features %s" % bow_train_features.getnnz())
     print("Get bag of word features for testing...")
     bow_test_features = get_test_data_features(d_test)
-    # print("Length of bow_test_features %s" % bow_test_features.getnnz())
 
     neighbors = NearestNeighbors(metric='cosine')
     print("Fitting for NearestNeighbors...")
@@ -73,10 +62,13 @@ def do_some_stuff(meta, pngs):
     # test image features = [[], [], [], []]
 
     # features are in the same space, computed with the same vgg16 model
-    training_icon_f, testing_icon_f = get_features(i_train, i_test)
+    print("Let's get some img features!")
+    print("you're only getting a small set of img features, to figure things out *******!!")
+    training_icon_f, testing_icon_f = get_features(pngs, i_train, i_test)
     img_n = NearestNeighbors(metric='cosine')
     # put all the image features (this way we search the whole space when looking for close images)
-    img_n.fit(training_icon_f + testing_icon_f)
+    all_img_features = training_icon_f + testing_icon_f
+    img_n.fit(all_img_features)
     print("len of results (%s) should be the same as len of testing_features (%s)" % (len(results), len(testing_icon_f)))
     # now that we have our k-nearest neighbors from bag of words features, look up the image features
     # now that we have those image features, we need to find the k-closest images to those images
@@ -84,23 +76,22 @@ def do_some_stuff(meta, pngs):
     accuracy = 0
     counter = 0
     for i, r in enumerate(results):
-        neighbors_f = map(lambda j: training_icon_f[j], r)
+        neighbors_f = [training_icon_f[j] for j in r]
         counter += 1
 
-
-        # do we fit all the values (?)
         img_neighbors = img_n.kneighbors(neighbors_f, return_distance=False)
-        # now that we have the closest is the golden value in this (?)
-        # we need to check and see the dimension of these things though, what's going on here
-        if testing_icon_f[i] in img_neighbors:
+        # okay! this contains the nearest neighbors [[], [], [], [], []] and within that are indecies
+        closests_featured_imgs = [[all_img_features[n] for n in neighbor]for neighbor in img_neighbors]
+        if np.array(testing_icon_f[i]) in np.array(closests_featured_imgs):
             accuracy += 1
         if (counter % 5000 == 0):
             print("Counter: %s" % counter)
-            print("Len & Shape of neighbors_f: (%s, %s) " % (len(neighbors_f),"idk"))
-            print("Len & Shape of img_neighbors: (%s, %s)" % (len(img_neighbors), "idk"))
             print("Current accuracy: %s" % (accuracy/len(testing_icon_f)))
     accuracy = accuracy / len(testing_icon_f)
     print("Accuracy for finding an image %f" % accuracy)
+    with open('results.txt', 'w') as f:
+        f.write(f'Accuracy for finding an image with bag of words baseline model: => {accuracy}')
+    
 
 
 
