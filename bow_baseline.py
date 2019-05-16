@@ -41,6 +41,7 @@ def split_corpus_test_train(data):
     # d = data['description'].to_numpy() if data frame doesnt work
     # actually I don't want to lose the img png directory 'icon'
     # so if my assumption is correct, we can just go ahead and do this
+    # why did this give an error?
     descriptions = data['description'].to_numpy()
     icons = data['icon'].to_numpy()
     return train_test_split(descriptions, icons, train_size=0.6)
@@ -71,38 +72,35 @@ def do_some_stuff(meta, pngs):
     # first index corresponds to first test data image
     # test image features = [[], [], [], []]
 
+    # features are in the same space, computed with the same vgg16 model
     training_icon_f, testing_icon_f = get_features(i_train, i_test)
+    img_n = NearestNeighbors(metric='cosine')
+    # put all the image features (this way we search the whole space when looking for close images)
+    img_n.fit(training_icon_f + testing_icon_f)
     print("len of results (%s) should be the same as len of testing_features (%s)" % (len(results), len(testing_icon_f)))
-    highest = (float("-inf"), -1)
-    lowest = (float("inf"), -1)
-    avgs = []
-    acc = 0
+    # now that we have our k-nearest neighbors from bag of words features, look up the image features
+    # now that we have those image features, we need to find the k-closest images to those images
+    # accuracy is calculated by seeing if the k-closest images contain my golden image!
+    accuracy = 0
+    counter = 0
     for i, r in enumerate(results):
-        # r should be a list of index values into bow_train_features, but can we just use those to get into i_train
-        # get the i_test[i] features
-        # get all i_train[r] features (r is array )
-        # compute cosine similarity
-        # get average
-        # save these values
-        # find highest avg & lowest and save those images somehow
-        neighbors_f = map(lambda i: training_icon_f[i], r)
-        # smaller the anlge, the higher the similarity
-        cos_similarities = cos_cdist(testing_icon_f[i], neighbors_f)
-        avg = np.average(cos_similarities)
-        avgs.append(avg)
-        if avg > highest[0]:
-            highest[0] = avg
-            highest[1] = i
-        elif avg < lowest[0]:
-            lowest[0] = avg
-            lowest[1] = i
-        if testing_icon_f[i] in neighbors_f:
-            acc += 1
+        neighbors_f = map(lambda j: training_icon_f[j], r)
+        counter += 1
 
-    print(avgs)
-    print(acc)
-    print(highest)
-    print(lowest)
+
+        # do we fit all the values (?)
+        img_neighbors = img_n.kneighbors(neighbors_f, return_distance=False)
+        # now that we have the closest is the golden value in this (?)
+        # we need to check and see the dimension of these things though, what's going on here
+        if testing_icon_f[i] in img_neighbors:
+            accuracy += 1
+        if (counter % 5000 == 0):
+            print("Counter: %s" % counter)
+            print("Len & Shape of neighbors_f: (%s, %s) " % (len(neighbors_f),"idk"))
+            print("Len & Shape of img_neighbors: (%s, %s)" % (len(img_neighbors), "idk"))
+            print("Current accuracy: %s" % (accuracy/len(testing_icon_f)))
+    accuracy = accuracy / len(testing_icon_f)
+    print("Accuracy for finding an image %f" % accuracy)
 
 
 
