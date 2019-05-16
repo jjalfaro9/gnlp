@@ -21,6 +21,9 @@ from utility import *
 parser = argparse.ArgumentParser()
 parser.add_argument("PNG_DIR", help="directory for all images")
 parser.add_argument("metadata_path", help="file to all data")
+parser.add_argument("k_bow", type=int, help="k for bag of words nearest neighbors")
+parser.add_argument("k_img", type=int, help="k for images nearest neighbors")
+parser.add_argument("ts", type=float, help="training size percent of training data")
 args = parser.parse_args()
 
 vectorizer = CountVectorizer(ngram_range=(1,2))
@@ -34,26 +37,26 @@ def get_test_data_features(test_data):
 def get_full_corpus(metadata_path, PNG_DIR):
     return get_data_frame(metadata_path, PNG_DIR)
 
-def split_corpus_test_train(data):
+def split_corpus_test_train(data, ts):
     descriptions = data['description'].to_numpy()
     icons = data['icon'].to_numpy()
     print("Len of descriptions (%s) and icons (%s) should be the same!" % (len(descriptions), len(icons)))
     print("Example of icon (icon livin' lol) %s " % icons[0])
-    return train_test_split(descriptions, icons, train_size=0.6)
+    return train_test_split(descriptions, icons, train_size=ts)
 
 
-def do_some_stuff(meta, pngs):
+def do_some_stuff(meta, pngs, k_bow, k_img, ts):
     print("Getting all the data...")
     data = get_full_corpus(meta, pngs)
     print("Splitting into training and testing sets...")
-    d_train, d_test, i_train, i_test = split_corpus_test_train(data)
+    d_train, d_test, i_train, i_test = split_corpus_test_train(data, ts)
     print("len of d_train and i_train should be samee %s %s" % (len(d_train), len(i_train)))
     print("Get bag of word features for training...")
     bow_train_features = get_trained_data_features(d_train)
     print("Get bag of word features for testing...")
     bow_test_features = get_test_data_features(d_test)
 
-    neighbors = NearestNeighbors(metric='cosine')
+    neighbors = NearestNeighbors(n_neighbors=k_bow, metric='cosine')
     print("Fitting for NearestNeighbors...")
     neighbors.fit(bow_train_features)
     print("Finding NearestNeighbors for testing set...")
@@ -66,7 +69,7 @@ def do_some_stuff(meta, pngs):
     # features are in the same space, computed with the same vgg16 model
     print("Let's get some img features!")
     training_icon_f, testing_icon_f = get_features(pngs, i_train, i_test)
-    img_n = NearestNeighbors(metric='cosine')
+    img_n = NearestNeighbors(n_neighbors=k_img, metric='cosine')
     # we need to only look up unseen img data!
     img_n.fit(testing_icon_f)
     print("len of results (%s) should be the same as len of testing_features (%s)" % (len(results), len(testing_icon_f)))
@@ -100,13 +103,15 @@ def do_some_stuff(meta, pngs):
     train_len = len(training_icon_f)
     accuracy = accuracy / testing_len
     print("Accuracy for finding an image %f" % accuracy)
-    with open('results.txt', 'w') as f:
+    txt_results = f'results-{k_bow}-{k_img}-{ts}.txt'
+    json_results = f'results-{k_bow}-{k_img}-{ts}.json'
+    with open(txt_results, 'w') as f:
         f.write(f'Accuracy for finding an image with bag of words baseline model: => {accuracy}\n')
         f.write(f'size of testing data: => {testing_len}, size of training data: => {train_len}')
-    with open('results.json', 'w') as r:
+    with open(json_results, 'w') as r:
         json.dump(img_map, r)
 
 
 
 if __name__ == '__main__':
-    do_some_stuff(args.metadata_path, args.PNG_DIR)
+    do_some_stuff(args.metadata_path, args.PNG_DIR, args.k_bow, args.k_img, args.ts)
