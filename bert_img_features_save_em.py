@@ -18,10 +18,13 @@ def _get_vgg16_fts(image_directory, image_paths, vgg):
     print("Get vgg16 fts...")
     image_objects = [image.load_img(f'{image_directory}/{img_path}', target_size=(224, 224)) for img_path in image_paths]
     x_images = [image.img_to_array(x) for x in image_objects]
-    x_images_exp = [np.expand_dims(img_data, axis=0) for img_dat in x_images]
+    x_images_exp = [np.expand_dims(img_dat, axis=0) for img_dat in x_images]
     imgs = [preprocess_input(img_d) for img_d in x_images_exp]
-    img_fts = vgg.predict(imgs)
-    return [np.array(vg_ft).flatten() for vg_ft in img_fts]
+    img_fts = []
+    for img in imgs:
+        fts = vgg.predict(img)
+        img_fts.append(np.array(fts).flatten())
+    return img_fts
 
 def _save_img_bert_fts(image_directory):
     # read in icons for training and testing 
