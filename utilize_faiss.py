@@ -3,6 +3,8 @@ import pickle
 import json
 import numpy as np
 import scipy.sparse as sps
+from sklearn.neighbors import NearestNeighbors
+
 
 # first we need to index put the vectors in there
 # then we can search things up!
@@ -43,9 +45,9 @@ def _if_list_transform(x):
     print(type(x))
     if isinstance(x, list):
         return np.ascontiguousarray(x, dtype=np.float32)
-    elif sps.isspmatrix_csr(x):
-        # return np.matrix(x.toarray())
-        return x.toarray()
+    # elif sps.isspmatrix_csr(x):
+    #     # return np.matrix(x.toarray())
+    #     return x.toarray()
     else:
         return x
 
@@ -108,6 +110,28 @@ def _compute_accuracies_metadata(name, description_fts_train, description_fts_te
     _write_metrics(name, 100, acc_100, meta_100, len(img_fts_train), len(img_fts_test))
     _write_metrics(name, 1000, acc1000, meta_1000, len(img_fts_train), len(img_fts_test))
 
+def _old_nn_bow(k, d_fts_train, d_fts_test, img_fts_train, img_fts_test, img_icon_test):
+    description_nn = NearestNeighbors(n_neighbors=k, metric='cosine')
+    description_nn.fit(d_fts_train)
+    img_nn = NearestNeighbors(n_neighbors=k, metric='cosine')
+    img_nn.fit(img_fts_test)
+
+    d_nn_from_training = description_nn.kneighbors(d_fts_test, return_distance=False)
+    accuracy = 0
+    meta_data = dict()
+    for i, nn in enumerate(d_nn_from_training):
+        img_train_fts_nn = [img_fts_train[j] for j in nn]
+        img_test_nn = img_nn.kneighbors(img_train_fts_nn, return_distance=False)
+        # img_test_nn = [[id1, id2], [id3, id4], [id5, id6]]
+        d = {}
+        d['neighbors'] = [ img_icon_test[n] for neighbor in img_test_nn for n in neighbor]
+        if any(i in k_n for k_n in img_test_nn):
+            accuracy += 1
+            d['golden_present'] = True
+        else:
+            d['golden_present'] = False
+        meta_data[img_icon_test[i]] = d
+    return (accuracy, meta_data)
 
 def bow():
     # these files are hardcoded and should be on the system
@@ -124,7 +148,20 @@ def bow():
     img_fts_train = _read_file('../bow/img_fts_train.p')
     img_fts_test = _read_file('../bow/img_fts_test.p')[0:10000]
 
-    _compute_accuracies_metadata("bow", bow_fts_train, bow_fts_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
+    bow_fts_train = _if_list_transform(bow_fts_train)
+    bow_fts_test = _if_list_transform(bow_fts_test)
+    img_fts_train = _if_list_transform(img_fts_train)
+    img_fts_test = _if_list_transform(img_fts_test)
+
+    # okay now we should do nearest neighbors the old way!
+    correct_100, meta_data100 = _old_nn_bow(100, bow_fts_train, bow_fts_test, img_fts_train, img_fts_test, img_icon_test)
+    correct_1000, meta_data1000 = _old_nn_bow(100, bow_fts_train, bow_fts_test, img_fts_train, img_fts_test, img_icon_test)
+
+    _write_metrics("bow", 100, correct_100, meta_data100, len(img_fts_train), len(img_fts_test))
+    _write_metrics("bow", 1000, correct_1000, meta_data1000, len(img_fts_train), len(img_fts_test))
+
+
+    # _compute_accuracies_metadata("bow", bow_fts_train, bow_fts_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
 
 def bert():
     # features
@@ -140,5 +177,5 @@ def bert():
     _compute_accuracies_metadata("bert", bert_vec_train, bert_vec_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
 
 if __name__ == '__main__':
-    # bow()
-    bert()
+    bow()
+    # bert()
