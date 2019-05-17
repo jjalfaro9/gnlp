@@ -1,6 +1,7 @@
 import faiss
 import pickle
 import json
+import numpy as np
 
 # first we need to index put the vectors in there
 # then we can search things up!
@@ -33,12 +34,23 @@ def _evaluate(I, gold):
     for index, neighbors in enumerate(I):
         if gold in neighbors:
             correct += 1
-            results.append() # need to think about this a bit more !
     return correct, results
+def _if_list_transform(x):
+    if isinstance(x, list):
+        return np.ascontiguousarray(x)
+    else:
+        return x
 
 def _general_algo(txt_train_elements, txt_test_elements, img_training_fts, img_testing_fts, img_icons, k):
+    print(txt_train_elements.shape)
+    txt_train_elements = _if_list_transform(txt_train_elements)
+    txt_test_elements = _if_list_transform(txt_test_elements)
+    img_training_fts = _if_list_transform(img_training_fts)
+    img_testing_fts = _if_list_transform(img_testing_fts)
+    print(txt_train_elements.shape, img_testing_fts.shape)
     bow_dimension = txt_train_elements.shape[1]
     img_dimension = img_testing_fts.shape[1]
+
 
     # bow_I (nq x k) index 0 is index 0 of txt_test_elements and this row contains indecies to txt_train_elements
     # 10k x (100, 1000)
@@ -81,8 +93,6 @@ def _write_metrics(filename, k, accuracy, metadata, training_len, testing_len):
         f.write(f'over all accuracy {overall_acc}')
 
 def _compute_accuracies_metadata(name, description_fts_train, description_fts_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test):
-    print("All of these should be 100k (%d)(%d)(%d)" %(description_fts_train, img_fts_train, img_icon_train))
-    print("All of these should be 10k (%d)(%d)(%d)" % (description_fts_test, img_fts_test, img_icon_test))
     # need to just figure out what to do with the results from general algo
     acc_100, meta_100 =  _general_algo(description_fts_train, description_fts_test, img_fts_train, img_fts_test, img_icon_test, 100) # Top 1%
     acc1000, meta_1000 = _general_algo(description_fts_train, description_fts_test, img_fts_train, img_fts_test, img_icon_test, 1000) # Top 10%
@@ -95,29 +105,29 @@ def bow():
     # these files are hardcoded and should be on the system
 
     # words, and png directories
-    description_train = np.array(_read_file('../bow/description_train.p')[0:100000])
-    description_test  = np.array(_read_file('../bow/description_test.p')[0:10000])
-    img_icon_train = np.array(_read_file('../bow/icon_train.p')[0:100000])
-    img_icon_test = np.array(_read_file('../bow/icon_test.p')[0:10000])
+    description_train =  _read_file('../bow/description_train.p')
+    description_test  = _read_file('../bow/description_test.p')[0:10000]
+    img_icon_train = _read_file('../bow/icon_train.p')
+    img_icon_test = _read_file('../bow/icon_test.p')[0:10000]
 
     # features
-    bow_fts_train = np.array(_read_file('../bow/bow_fts_train.p')[0:100000])
-    bow_fts_test = np.array(_read_file('../bow/bow_fts_test.p')[0:10000])
-    img_fts_train = np.array(_read_file('../bow/img_fts_train.p')[0:100000])
-    img_fts_test = np.array(_read_file('../bow/img_fts_test.p')[0:10000])
+    bow_fts_train = _read_file('../bow/bow_fts_train.p')
+    bow_fts_test = _read_file('../bow/bow_fts_test.p')[0:10000]
+    img_fts_train = _read_file('../bow/img_fts_train.p')
+    img_fts_test = _read_file('../bow/img_fts_test.p')[0:10000]
 
     _compute_accuracies_metadata("bow", bow_fts_train, bow_fts_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
 
 def bert():
     # features
-    bert_vec_train = np.array(_read_file('../bert_fts/bert_vec_train.p')[0:100000])
-    bert_vec_test = np.array(_read_file('../bert_fts/bert_vec_test.p')[0:10000])
-    img_fts_train = np.array(_read_file('../bert_fts/img_fts_train.p')[0:100000])
-    img_fts_test = np.array(_read_file('../bert_fts/img_fts_test.p')[0:10000])
+    bert_vec_train = _read_file('../bert_fts/bert_vec_train.p')
+    bert_vec_test = _read_file('../bert_fts/bert_vec_test.p')[0:10000]
+    img_fts_train = _read_file('../bert_fts/img_fts_train.p')
+    img_fts_test = _read_file('../bert_fts/img_fts_test.p')[0:10000]
 
     #png directories
-    img_icon_train = np.array(_read_file('../bert_fts/img_icons_train.p')[0:100000])
-    img_icon_test  = np.array(_read_file('../bert_fts/img_icons_test.p')[0:10000])
+    img_icon_train = _read_file('../bert_fts/img_icons_train.p')
+    img_icon_test  = _read_file('../bert_fts/img_icons_test.p')[0:10000]
 
     _compute_accuracies_metadata("bert", bert_vec_train, bert_vec_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
 
