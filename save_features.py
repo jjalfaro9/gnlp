@@ -1,7 +1,9 @@
 import json
 import os
+import pickle
 import pandas as pd
 import numpy as np
+import argparse
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
@@ -98,18 +100,19 @@ def _split_corpus_test_train(data):
     # usually the number is 112,282 and the magic number that gets us around there is .9 => 101k, 11k
 
     descriptions_len, icons_len = len(descriptions), len(icons)
-    if descritpions_len == 112282:
+    print("Lengths should be the same, are they and are they equal to 11282? (%s) (%s)" % (descriptions_len, icons_len))
+    if descriptions_len == 112282:
         ts = 0.9
     else:
         # neeed to compute ts => x / len = ts , 110k / len = (?) but what if len is not long enough
-        if len > 100000:
-            ts = 100000 / descritpions_len
+        if descriptions_len > 100000:
+            ts = 100000 / descriptions_len
         else:
-            ts = # lol
+            ts = 0.8
     return train_test_split(descriptions, icons, train_size=ts)
 
 def _get_features(pngs_dir, training, testing):
-    model = VGG16(weights='imagenet')
+    model = VGG16(weights='imagenet', include_top=False)
     training_features = _extract_features(pngs_dir, training, model)
     testing_features = _extract_features(pngs_dir, testing, model)
     return (training_features, testing_features)
@@ -130,9 +133,9 @@ def _extract_features(pngs_dir, icons, model):
         vgg16_features.append(np.array(vgg16_feature).flatten())
     return vgg16_features
 
-def _save_file(file, data):
-    with open(file, 'w') as f:
-        f.write(data)
+def _save_file(file_path, data):
+    with open(file_path, 'wb') as f:
+        pickle.dump(data, f)
 
 def save_features(metadata_path, png_dir):
     data = _read_in_data(metadata_path, png_dir)
@@ -143,11 +146,14 @@ def save_features(metadata_path, png_dir):
 
     img_features_train, img_features_test = _get_features(png_dir, i_train, i_test)
 
-    _save_file('description_train.txt', d_train)
-    _save_file('description_test.txt', d_test)
-    _save_file('icon_train.txt', i_train)
-    _save_file('icon_test.txt', i_test)
-    _save_file('bow_fts_train.txt', bow_train)
-    _save_file('bow_fts_test.txt', bow_test)
-    _save_file('img_fts_train.txt', img_features_train)
-    _save_file('img_fts_test.txt', img_features_test)
+    _save_file('description_train.p', d_train)
+    _save_file('description_test.p', d_test)
+    _save_file('icon_train.p', i_train)
+    _save_file('icon_test.p', i_test)
+    _save_file('bow_fts_train.p', bow_train)
+    _save_file('bow_fts_test.p', bow_test)
+    _save_file('img_fts_train.p', img_features_train)
+    _save_file('img_fts_test.p', img_features_test)
+
+if __name__ == '__main__':
+	save_features(args.metadata_path, args.PNG_DIR)
