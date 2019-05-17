@@ -8,7 +8,7 @@ from keras.applications.vgg16 import preprocess_input
 from sklearn.model_selection import train_test_split
 
 
-def get_vectors(datas_index, sub_index, datas):
+def get_vectors(datas_index, sub_index, datas, shape, max_len):
     #     print(app_index)
     #     (datas_index, sub_index) = metadata[app_index]['lookup_index']
     result = datas[datas_index][sub_index]
@@ -47,7 +47,7 @@ def _get_data(image_directory):
         #     lookup_dict.append()
         last_index = index
     lookup_vectors = lookup_vectors = [x['lookup_index'] for x in metadata]
-    pos_wordvectors = [get_vectors(x[0], x[1], datas) for x in lookup_vectors]
+    pos_wordvectors = [get_vectors(x[0], x[1], datas, shape, max_len) for x in lookup_vectors]
     image_paths = [x['icon'] for x in metadatas]
     image_objects = [image.load_img(f'{image_directory}/{img_path}', target_size=(224, 224)) for img_path in image_paths]
     x_images = [image.img_to_array(x) for x in image_objects]
