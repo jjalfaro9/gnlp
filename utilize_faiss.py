@@ -120,3 +120,7 @@ def bert():
     img_icon_test  = np.array(_read_file('../bert_fts/img_icons_test.p')[0:10000])
 
     _compute_accuracies_metadata("bert", bert_vec_train, bert_vec_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
+
+if __name__ == '__main__':
+    bow()
+    bert()
