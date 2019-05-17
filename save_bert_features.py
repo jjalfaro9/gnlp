@@ -48,41 +48,35 @@ def _get_data(image_directory):
         last_index = index
     lookup_vectors = lookup_vectors = [x['lookup_index'] for x in metadata]
     pos_wordvectors = [get_vectors(x[0], x[1], datas, shape, max_len) for x in lookup_vectors]
-    image_paths = [x['icon'] for x in metadatas]
-    image_objects = [image.load_img(f'{image_directory}/{img_path}', target_size=(224, 224)) for img_path in image_paths]
-    x_images = [image.img_to_array(x) for x in image_objects]
-    x_images_exp = [np.expand_dims(img_data, axis=0) for img_dat in x_images]
-    imgs = [preprocess_input(img_d) for img_d in x_images_exp]
-    vgg = VGG16(weights='imagenet', include_top=False)
-    img_fts = vgg.predict(imgs)
-    flattend_img_fts = [np.array(vg_ft).flatten() for vg_ft in img_fts]
-    return (pos_wordvectors, flattend_img_fts, image_paths)
+    image_paths = [x['icon'] for x in metadata]
+    
+    return (pos_wordvectors, image_paths)
 
-def _split_corpus_test_train(bert_vecs, img_fts, img_paths):
+def _split_corpus_test_train(bert_vecs, img_paths):
 
-    descriptions_len, icons_len = len(bert_vecs), len(img_fts)
-    if descritpions_len == 112282:
+    descriptions_len, icons_len = len(bert_vecs), len(img_paths)
+    if descriptions_len == 112282:
         ts = 0.9
     else:
         # neeed to compute ts => x / len = ts , 110k / len = (?) but what if len is not long enough
-        if len > 100000:
-            ts = 100000 / descritpions_len
+        if descriptions_len > 100000:
+            ts = 100000 / descriptions_len
         else:
             ts = 0.8
-    return train_test_split(bert_vecs, img_fts, train_size=ts)
+    return train_test_split(bert_vecs, img_paths, train_size=ts)
 
 def _save_file(file_path, data):
     with open(file_path, 'wb') as f:
         pickle.dump(data, f)
 
 def save_features(image_directory):
-    bert_vec, img_fts, img_paths = _get_data(image_directory)
-    bert_vec_train, bert_vec_test, img_fts_train, img_fts_test, img_icons_train, img_icons_test = _split_corpus_test_train(bert_vec, img_fts, img_paths)
+    bert_vec, img_paths = _get_data(image_directory)
+    bert_vec_train, bert_vec_test, img_icons_train, img_icons_test = _split_corpus_test_train(bert_vec, img_paths)
 
     _save_file('bert_vec_train.p', bert_vec_train)
     _save_file('bert_vec_test.p', bert_vec_test)
-    _save_file('img_fts_train.p', img_fts_train)
-    _save_file('img_fts_test.p', img_fts_test)
+    # _save_file('img_fts_train.p', img_fts_train)
+    # _save_file('img_fts_test.p', img_fts_test)
     _save_file('img_icons_train.p', img_icons_train)
     _save_file('img_icons_test.p', img_icons_test)
 
