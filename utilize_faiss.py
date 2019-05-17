@@ -2,6 +2,7 @@ import faiss
 import pickle
 import json
 import numpy as np
+import scipy.sparse as sps
 
 # first we need to index put the vectors in there
 # then we can search things up!
@@ -11,6 +12,9 @@ import numpy as np
 def _get_index(dimension, elements):
     index = faiss.IndexFlatL2(dimension)
     print("Is index trained? (%s)" % index.is_trained)
+    print("_get_index, element typ => ", type(elements))
+    print("dimension =>", dimension)
+    print("element shape => ", elements.shape)
     index.add(elements)
     print("Total number of data elements indexed = %s" % index.ntotal)
     return index
@@ -36,18 +40,22 @@ def _evaluate(I, gold):
             correct += 1
     return correct, results
 def _if_list_transform(x):
+    print(type(x))
     if isinstance(x, list):
-        return np.ascontiguousarray(x)
+        return np.ascontiguousarray(x, dtype=np.float32)
+    elif sps.isspmatrix_csr(x):
+        # return np.matrix(x.toarray())
+        return x.toarray()
     else:
         return x
 
 def _general_algo(txt_train_elements, txt_test_elements, img_training_fts, img_testing_fts, img_icons, k):
-    print(txt_train_elements.shape)
     txt_train_elements = _if_list_transform(txt_train_elements)
     txt_test_elements = _if_list_transform(txt_test_elements)
     img_training_fts = _if_list_transform(img_training_fts)
     img_testing_fts = _if_list_transform(img_testing_fts)
     print(txt_train_elements.shape, img_testing_fts.shape)
+    print(txt_test_elements.shape, img_training_fts.shape)
     bow_dimension = txt_train_elements.shape[1]
     img_dimension = img_testing_fts.shape[1]
 
@@ -132,5 +140,5 @@ def bert():
     _compute_accuracies_metadata("bert", bert_vec_train, bert_vec_test, img_fts_train, img_fts_test, img_icon_train, img_icon_test)
 
 if __name__ == '__main__':
-    bow()
+    # bow()
     bert()
