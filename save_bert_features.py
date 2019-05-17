@@ -85,3 +85,11 @@ def save_features(image_directory):
     _save_file('img_fts_test.p', img_fts_test)
     _save_file('img_icons_train.p', img_icons_train)
     _save_file('img_icons_test.p', img_icons_test)
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("image_directory")
+args = parser.parse_args()
+
+if __name__ == '__main__':
+	save_features(args.image_directory)
